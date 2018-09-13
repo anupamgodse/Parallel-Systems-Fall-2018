@@ -1,0 +1,56 @@
+Author: Anupam Godse angodse@ncsu.edu
+
+Problem Statement:
+
+Write an MPI program that determines the point-to-point message latency for pairs of nodes. We will exchange messages with varying message sizes from 32B to 2M (32B, 64B, 128B, ..., 2M). The same program should iterate through each of the message sizes with 10 iterations for each. We will use 8 nodes (4 pairs). Remember to promptly release the nodes by exiting the compute node IMMEDIATELY after your code is finished or by using batch scripts.
+
+    Plot the average round-trip time (rtt) as a function of message size, as well as the standard deviation (stddev) as error bars. 
+
+
+Usage:
+
+Compilation:
+
+Open terminal and go to the assignment directory and run.
+>make -f p1.Makefile
+
+This will generate an executable file p1
+
+To run the code:
+
+>prun ./p1
+
+
+Output:
+A output file will be generated named output.txt
+The data in the file is arranged column wise
+viz. message size (size), pair number(pair), average round trip time (Avg. RTT) and standard deviation (Std. Deviation)
+
+This data is plotted using a python program(Not submitted) and graph is generated as p1.png (submitted).
+
+
+When calculating average rtt, skip the first message exchange -- why? 
+--> MPI will take some time initially to set up its internal environment.
+Like reserving system buffer space for communication, etc
+So we need to skip the first message exchange.
+
+Understanding plot:
+
+Message size vs latency:
+As the message size grows the latency grows. This is because it takes longer time to copy messgaes with more size to 
+system buffer at sender and back to application buffer at receiver. Also MPI sends messages accross networks having 
+limited bandwidths. As the message size increases the bandwidth requirement will be high and it may take longer due
+to congestions.
+
+Some pairs consistently take longer than others in particular pair 2 in our plot is consistently taking longer
+than other pairs. This is because the processors running these pair may be connected via higher swiches 
+and thus taking more time to switch.
+
+Odd points in data plots:
+As we can see it takes longer for 32 byte messages than 64 bytes and some other bigger message sizes.
+Honestly, I searched a lot for this but cannot figure out the exact reason.
+
+One more odd point is observed at 8192 bytes message size for pair1. It takes a lot longer than other pairs and previous 
+message sizes. This may be because the system buffer was initially only allocated 4096 bytes and now it needs 8196 so
+it is reallocated and possible reason for contributing towards latency.	
+
