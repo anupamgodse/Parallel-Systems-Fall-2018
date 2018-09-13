@@ -1,0 +1,111 @@
+Single Author info:
+
+vphadke Vandan V Phadke
+
+Group info:
+
+angodse Anupam N Godse
+
+yjkamdar Yash J Kamdar
+
+Problem Statement:
+--------------------------------------------------------------------------
+Parallelizing implementation of differentiating a function and plotting it.
+
+Solution:
+--------------------------------------------------------------------------
+Firstly, we will compute the grid points based on the number of grid points specified
+by the user which will range from 1 to 100 with 0 and 100 + dx being the base case
+points required to calculate differential at 1 and 100 respectively and stored
+in an array.
+
+To parallelize the serial code to compute differential at various data points
+on the graph, we divide the gridpoints equally(the last one may get a lesser number
+of points if the divide is uneven) amongst the number of total processes.
+
+Each process will calculate the startpoint_index and endpoint_index of their 
+domain based on their rank and calculate differential for these gridpoints only.
+
+To do this, firstly each process will calculate the endpoint function values 
+of their domain and send to lower rank (left endpoint value) and higher rank(right
+endpoint value) processes.
+
+Then each process will calculate the function values of the intermediate points.
+Now using these function values(including leftmost and rightmost) they will 
+calculate the differential for intermediate points.
+
+Now each process will wait unless they receive the function values from lower 
+and higher rank process.
+
+Once received each process will use these values to calculate the differential at 
+endpoint values of their domain.
+
+Finally, the root process will gather all the differential values and function values
+from all the processes (including self) using MPI_Gather.
+
+These values are finally printed to a .dat file and the graphs are plotted.
+
+
+Usage
+--------------------------------------------------------------------------
+1) Go into the directory containing the code and makefile
+2) Run make -f p2.Makefile (An executable p2 will be created after this step)
+3) Run prun ./p2 NGRID blocking_type gather_type
+   Here the approrpiate parameter values will be
+   NGRID - Number of grid points
+   blocking_type - 0 - Blocking / 1 - Non-blocking
+   gather_type - 0 - In-built gather / 1 - Manual Gather
+
+Accuracy of derivative function
+--------------------------------------------------------------------------
+
+Grid points:
+
+When there are a few grid points, the derivative function is not smooth as 
+the adjacent grid points are too far for accurate function computation. 
+As we increase the number of grid points, the functions become smooth
+and accuracy of the derivative function increases. 
+
+Function used: 
+The derivative function plot depends on the function for which we are
+implementing. If the function is of higher power, it will have a smooth derivative curve if the number of grid points is also higher. In cases with
+functions with low orders (eg: step functions, linear functions) the 
+derivative may have constant values which will remove the dependency
+of accuracy on the number of grid points. 
+
+Performance Evaluation:
+--------------------------------------------------------------------------
+We did a performance evaluation for different combinations of point to point
+communication (blocking/non-blocking) and gather type (manual vs in-built). 
+The time was calculated getting MPI_WTime at the start and end of the root
+process (as the root process was the one gathering the final output) and 
+subtracting the time to get the running time of the program. We did 5 runs 
+of each combination. The results have been noted below: 
+
+We used the following parameters:
+NGRID - 1000000
+fn    - sin(x)
+
+Type - Blocking with inbuilt MPI_Gather (00)
+
+2.664093 2.677451 2.763472 2.727365 2.699879
+
+Type - Blocking with manual MPI_Gather (01)
+
+2.605772 2.727280 2.636737 2.732880 2.680337
+
+Type - Non-Blocking with inbuilt MPI_Gather (10)
+
+2.744826 2.667108 2.669274 2.672136 2.657645
+
+Type - Non-Blocking with manual MPI_Gather (11)
+
+2.742396 2.699078 2.630590 2.710697 2.784135
+
+The best case here is the one with non-blocking communication along
+with inbuilt gather. This is intuitive because, non-blocking 
+communication doesn't wait for the acknowledgement from the receiving
+process and continues with other computations unless a wait is 
+requested. Also the inbuilt MPI_Gather has to be computationally
+more efficient because of the different types of gathering used
+(eg: tree based) whereas our manual gather does an all to one message transfer.
