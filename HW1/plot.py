@@ -26,30 +26,29 @@ i = 0;
 
 xlabels = []
 
-excludeLines = [0, 1, 2, 3];
+excludeLines = [0];
 for lineNo, line in enumerate(f):
 	if(lineNo in excludeLines):
 		continue;
 	
-	#print(line);
 	temp = line.split();
-	
-	if(lineNo % 4 == 0):
+	print(temp);
+		
+	if((lineNo+3) % 4 == 0):
 		xlabels.append(temp[0]);
-		print("temp1 =" + temp[2]);
+		#print("temp1 =" + temp[2]);
 		pair1.append(float(temp[2]));
 		sdpair1.append(float(temp[3]));
-	elif(lineNo % 4 == 1):
+	elif((lineNo+3) % 4 == 1):
 		pair2.append(float(temp[2]));
 		sdpair2.append(float(temp[3]));
-	elif(lineNo % 4 == 2):
+	elif((lineNo+3) % 4 == 2):
 		pair3.append(float(temp[2]));
 		sdpair3.append(float(temp[3]));
 	else:
 		pair4.append(float(temp[2]));
 		sdpair4.append(float(temp[3]));
 	
-	lineNo += 1;
 
 N = 17
 
@@ -57,7 +56,7 @@ ind = np.arange(N)  # the x locations for the groups
 width = 0.17      # the width of the bars
 
 fig, ax = plt.subplots()
-print(pair1)
+#print(pair1)
 rects1 = ax.bar(ind, pair1, width, edgecolor='red', color = 'white', yerr=sdpair1, 
 		alpha = opacity, ecolor = 'red', capsize = 5, linewidth = 1)
 
