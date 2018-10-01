@@ -1,0 +1,33 @@
+Usage:
+
+To generate executable p2:
+
+>>make -f p2.Makefile
+
+To run:
+	
+>>./p2 niter
+
+
+Explanantion:
+
+Each block will have 512 threads. (block_size = 512)
+
+So the total number of blocks will be niter/block_size
+
+On host there is a array count_host of which each index will represent if that 
+thread has generated a z value within the circle.
+
+Firstly, this count_host array is initialized to 0;
+
+Similar array count_dev is made for device which is also set to 0 initially.
+
+Now we call the function in which each thread will generate x and y randomely and
+calculate z if this value is within the circle i.e < 1 then it will set its count 
+to 1. i.e. count_dev[idx] = 1;
+
+After all threads set their count and function returns.
+This array count_dev will be copied back to count_host.
+
+Now we will loop through this array to get the final count.
+

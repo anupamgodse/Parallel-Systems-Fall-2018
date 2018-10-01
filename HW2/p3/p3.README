@@ -1,0 +1,132 @@
+--------------------------------------------------------------------------------
+Single Author info:
+
+angodse Anupam N Godse
+
+Group info:
+
+vphadke Vandan V Phadke
+
+yjkamdar Yash J Kamdar
+--------------------------------------------------------------------------------
+
+Usage
+V1:
+
+In terminal type:
+make -f p2.Makefile lake
+This wiil make lake executable.
+
+Run:
+
+./lake grid_size npebs time
+
+
+V2:
+
+make -f p2.Makefile lake
+
+for cpu:
+./lake grid_size npebs time
+
+for gpu:
+./lake grid_size npebs time nthreads
+
+
+V4:
+make -f p2.Makefile lake-mpi
+
+Run:
+./lake-mpi grid_size npebs time nthreads
+
+
+Group Problem 3
+
+
+Q0. Perform experiments and compare and contrast the two versions (5-point vs 9-point). What are the tradeoffs? Note that the 9-point version evolves faster and you need to run it with shorter end_time when comparing with 5-point version.
+
+*Compare and contrast results.
+-5pt takes less time to compute and more time to evolve than 9pt.
+-We noticed time difference of 0.2 seconds in evolve.
+
+
+Q1. How well does your algorithm scale on the GPU? Do you find cases (grid size, thread number, etc.) where the GPU implementation does not scale well? Why?
+
+The algorithm scales well and has following condition:
+
+If nthreads is number of threads per block and n are number of points i.e grid size is n * n,
+then n must be evenly divisible by nthreads as we assign nthreads perblock so n/nthreads are
+total number of blocks needed which should be an integer.
+
+
+Q2. In the serial code, compare your CPU and GPU runtimes for different grid sizes. When is the GPU better, and when is it worse?
+
+Tested on grid sizes starting from 8 to 1028 in multiples of 2.
+
+We found that until grid size 128 CPU performs better than the GPU. From 256 GPU started to take over CPU.
+At size 1024 with 20 pebbles and 32 threads GPU performed much better taking only 26 seconds as compared
+to CPU which took 154 seconds.
+
+Appartly there are advantages of using GPU when data is large.
+
+
+Q3. Integrating CUDA and MPI involves more sophisticated code. What problems did you encounter? How did you fix them?
+
+We started by thinking about how to divide the grid so that each section can be assigned to each process.
+Firstly, we decided to breakdown into four squares in the following way.
+
+
+                                 |-------------|------------|
+                                 |             |            |
+                                 |             |            |
+                                 |             |            |
+                                 |             |            |
+                                 |             |            |
+                                 |             |            |
+                                 |-------------|------------|
+                                 |             |            |
+                                 |             |            |
+                                 |             |            |
+                                 |             |            |
+                                 |             |            |
+                                 |             |            |
+                                 |-------------|------------|
+
+
+
+But as the array was 1-dimensional we had hard time computing the indices that we are suppose to pass to other processes.
+
+So we later decided to divide the grid horizontally in the following way
+
+                                 |--------------------------|
+                                 |                          |
+                                 |                          |
+                                 |                          |
+                                 |--------------------------|
+                                 |                          |
+                                 |                          |
+                                 |                          |
+                                 |--------------------------|
+                                 |                          |
+                                 |                          |
+                                 |                          |
+                                 |--------------------------|
+                                 |                          |
+                                 |                          |
+                                 |                          |
+                                 |--------------------------|
+
+
+Clearly this division has advantages as the array is 1d so we can pass continuous array of n size to the
+preceding(not for 0) and next rank(not for nprocs-1).
+
+Now the problem was simplified.
+
+Now we needed to communicate between processes to send and receive data needed from previous computation.
+There was lot of confusion between deciding the sequence of MPI_Send and MPI_Receive.
+Finally we found a sequence which would not cause a deadlock and/or buffer overflow within MPI.
+
+Lastly, we tested the code and to verify the output we gather all the data into process 0 to generate
+a single .dat file.
+
+The results we got were same for cpu and gpu.
