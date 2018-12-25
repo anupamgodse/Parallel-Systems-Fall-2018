@@ -1,0 +1,20 @@
+
+Describe the communication pattern. Where is most of the communication happening (number of calls)?
+Most of the communication is happening at the middle wide diagonal of the matrix. The number of calls 
+vary and have following values 21 41 and 61.
+
+This means that the elements are communicating with the near elements heavily and not with far away elements
+
+
+What symmetries do you expect to see for Send counts? Are these symmetries observed? Why or Why not? 
+I saw the lulesh code and it was clear that the data is evolving according to time. It is clear that 
+each rank is communicating at start with some other rank which is where the extra send is coming from.
+Later in loop time is increamented until the stoptime and each rank then executes LagrangeLeapFrog()
+in which where is send and receive. As each rank does this there was communication symmetry expected
+which is observed in the plot file. In this function it seems that each element is asking for somedata
+and using CommRecv from neighbouring elements and sending data to neighbouring elements.
+
+It can be infered that the elements are communicating as the time grows in the symetric fashion expecting
+some data to neighbouring nodes and then sending data to those.
+
+

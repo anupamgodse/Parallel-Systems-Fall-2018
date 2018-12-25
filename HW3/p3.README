@@ -1,0 +1,192 @@
+Single Author info:
+
+angodse Anupam N. Godse
+
+
+Your lake.log timings and kernel timing statistics (stdout) for each optimization
+
+Serial(from v2 optimized memcpys) for 512 4 4.0 1
+
+running ./lake with (512 x 512) grid, until 4.000000, with 1 threads
+Initialization took 0.011135 seconds
+Simulation took 60.980266 seconds
+Init+Simulation took 60.991401 seconds
+
+Naiveacc for 512 4 4.0 1
+running ./lake with (512 x 512) grid, until 4.000000, with 1 threads
+Initialization took 0.008356 seconds
+Simulation took 32.697622 seconds
+Init+Simulation took 32.705978 seconds
+
+Optimized final for 512 4 4.0 1 (50 times faster than serial)
+
+
+Accelerator Kernel Timing data
+/home/angodse/hw3/submit/lake.c
+  run_sim  NVIDIA  devicenum=0
+    time(us): 655,800
+    198: data region reached 2 times
+        198: data copyin transfers: 3
+             device time(us): total=1,131 max=387 min=371 avg=377
+        266: data copyout transfers: 1
+             device time(us): total=358 max=358 min=358 avg=358
+    201: compute region reached 1 time
+        204: kernel launched 1 time
+            grid: [16x128]  block: [32x4]
+             device time(us): total=57 max=57 min=57 avg=57
+            elapsed time(us): total=962 max=962 min=962 avg=962
+    201: data region reached 2 times
+    231: compute region reached 4097 times
+        235: kernel launched 4097 times
+            grid: [16x128]  block: [32x4]
+             device time(us): total=654,254 max=167 min=149 avg=159
+            elapsed time(us): total=745,071 max=262 min=171 avg=181
+    231: data region reached 8194 times
+(reverse-i-search)`./': ^Clake 512 4 4.0 1
+[angodse@c9 submit]$ cat lake.log 
+running ./lake with (512 x 512) grid, until 4.000000, with 1 threads
+Initialization took 0.007888 seconds
+Simulation took 1.187538 seconds
+Init+Simulation took 1.195426 seconds
+
+below are the optimizations done in code.
+
+#pragma acc data copyin(u0[:n*n], u1[:n*n],pebbles[:n*n]) copyout(un[:n*n]) create(uo[:n*n], uc[:n*n])
+  {
+  #pragma omp parallel for num_threads(nthreads) private(j, idx)
+  #pragma acc kernels loop present(u0[:n*n], u1[:n*n], uo[:n*n], uc[:n*n], pebbles[:n*n], un[:n*n]) 
+  for(i = 0; i < n ; i++)
+  {
+    for(j = 0; j < n ; j++)
+    {
+      idx = j + i * n;
+      uo[idx] = u0[idx];
+		uc[idx] = u1[idx];	
+    }
+  }
+
+  t = 0.;
+  dt = h / 2.;
+
+  while(1)
+  {
+	#pragma acc kernels loop present(uo[:n*n], uc[:n*n], pebbles[:n*n], un[:n*n]) 
+	#pragma omp parallel for num_threads(nthreads) private(j, idx)
+    for( i = 0; i < n; i++)
+    {
+      for( j = 0; j < n; j++)
+      {
+        idx = j + i * n;
+
+
+This optimization included copyin from host to device only u0, u1 and pebbles at start copyout un
+and creating uc and uo on device.
+
+I included initialization parallelization in this i.e(u0->uo and u1->uc) which increased
+the performance than not including it.
+
+Later I used kernels loop to parallize the for loop and "present" directive was used as without it 
+pointers swapping dosen't work as present tells that the arrays are present somewhere on the device
+indicating its location might have changed.
+
+*************************************************************************************************************
+
+Intermediate optimizations
+
+This is one of the many different combinations that I tried. Currently
+have results for only this combination. But what I noticed was compiler
+automatically chooses the best combination.
+
+Optimization 1 Tried for the following configuration
+	#pragma acc kernels loop gang(16), vector(4) present(uo[:n*n], uc[:n*n], pebbles[:n*n], un[:n*n]) 
+	#pragma omp parallel for num_threads(nthreads) private(j, idx)
+    for( i = 0; i < n; i++)
+    {
+	  #pragma acc loop gang(128), vector(32)
+      for( j = 0; j < n; j++)
+      {
+      
+Preformance 
+running ./lake with (512 x 512) grid, until 4.000000, with 1 threads
+Initialization took 0.008380 seconds
+Simulation took 2.782464 seconds
+Init+Simulation took 2.790844 seconds
+
+In this i only parallized the compute loop and not memcpy also a little different
+combination of grid and block size was tried.
+
+***************************************************************************************************************
+
+Optimization 2 Tried for the following configuration
+
+
+	#pragma acc data copyin(u0[:n*n], u1[:n*n],pebbles[:n*n]) copyout(un[:n*n]) create(uo[:n*n], uc[:n*n])
+  {
+  #pragma omp parallel for num_threads(nthreads) private(j, idx)
+  #pragma acc kernels loop present(u0[:n*n], u1[:n*n], uo[:n*n], uc[:n*n], pebbles[:n*n], un[:n*n]) 
+  for(i = 0; i < n ; i++)
+  {
+    for(j = 0; j < n ; j++)
+    {
+      idx = j + i * n;
+      uo[idx] = u0[idx];
+		uc[idx] = u1[idx];	
+    }
+  }
+
+  /* start at t=0.0 */
+  t = 0.;
+  dt = h / 2.;
+
+
+  /* loop until time >= end_time */
+  while(1)
+  {
+    /* run a central finite differencing scheme to solve
+     * the wave equation in 2D */
+	#pragma acc kernels loop present(uo[:n*n], uc[:n*n], pebbles[:n*n], un[:n*n]) 
+	#pragma omp parallel for num_threads(nthreads) private(j, idx)
+    for( idx = 0; idx < n*n; idx++)
+    {
+        /* impose the u|_s = 0 boundary conditions */
+        //if( i == 0 || i == n - 1 || j == 0 || j == n - 1)
+        if((idx % n == 0) || ((idx + 1) % n == 0) || idx < n || idx > n*(n-1) - 1)
+        {
+          un[idx] = 0.;
+        }
+
+Performace for 512 4 4.0 1
+running ./lake with (512 x 512) grid, until 4.000000, with 1 threads
+Initialization took 0.008367 seconds
+Simulation took 2.172943 seconds
+Init+Simulation took 2.181310 seconds
+
+This has the compute loop flattened to 1d instead of nested.
+
+***********************************************************************************************************************
+I tried a lot of other combinations but didn't log the results.
+
+One of these initial tests was instead of swapping pointers on device(which i faced problems with earlier)
+i did
+for(idx = 0;idx < n*n; i++) 
+ 	uo[idx] = uc[idx]
+ 	uc[idx] = un[idx]
+
+This performs slightly bad than our optimized(pointers swapping) version.
+
+***********************************************************************************************************************
+
+The effect of the problem size (smaller vs. larger grids, short vs. longer simulation times)
+For smaller problem sizes serial code with perform better.
+For large problem sizes openacc with perfom best.
+
+
+Where your biggest optimization came from (eg thread scheduling? memory management? screaming at the screen louder?)
+Biggest optimization came from preventing copyin(host->device) and copyout(device -> host) at each iteration in while loop.
+This was optimized by using copyin at start only(outside while) and using present and then swapping pointers on device.
+
+Thread scheduling: I tried various combinations but it turned out that compiler already has chosen the best combination.
+
+Possible improvements in the code, etc. 
+I tried caching data at inner for loop but it was apparant that the device already does that by default because caching the above row,
+the current row and the below row gave same results as without caching anything.

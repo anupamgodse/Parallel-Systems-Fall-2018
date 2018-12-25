@@ -1,0 +1,56 @@
+Single Author info:
+
+angodse Anupam N Godse
+
+Group info:
+
+vphadke Vandan V Phadke
+
+yjkamdar Yash J Kamdar
+
+
+What is the overhead of performing one checkpoint? 
+
+This can be calculated as (real time(Case B) - real time(case A) / number of checkpoints)
+number of checkpoints = real time(case A) in seconds / 40
+
+Case A timings:
+	real 2m19.033s
+	user 2m18.410s
+	sys 0m0.554s
+
+Case B timings:
+
+	real 2m27.095s
+	user 2m24.860s
+	sys 0m1.585s
+
+
+number of checkpoints  	= int(139.033/40) 
+								= 3
+
+Average overhead 	= (147.095 - 139.033) / 3 
+						= 2.687 seconds/checkpoint
+
+
+
+What is the overhead of one restart? 
+
+Case C timing 	= (number of checkpoints * 40 + execution time for case C)
+					= 3*40+22.238
+					= 142.238 seconds
+
+overhead for one restart 	= Case C timing - Case A timing
+									= 142.238 - 139.033
+									= 3.205 seconds
+									
+									
+How to the "real" times for each case compare to the execution time output by the CoMD code? 
+For case A and case B they are same. For case C it is much larger.
+
+You should see a very large execution time reported by the CoMD code in case C. Why? 
+It may be because of system calculating the time by taking the time at the start of execution and 
+at the end of execution. In case C this start time would be taken from checkpoint stored and will be 
+the time at which the process creating the checkpoint was started. After completing execution the end
+time will be current system time and therefore the difference would be much larger. This implies this also
+includes the time between checkpoint creation and starting case C excution.

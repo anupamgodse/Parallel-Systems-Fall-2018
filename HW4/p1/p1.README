@@ -1,0 +1,139 @@
+Single Author info:
+angodse Anupam N Godse
+
+
+Implementation details:
+
+WCMapper:
+
+Creates a (key,value) pair for every word in the document 
+
+Input:  ( byte offset , contents of one line )
+
+Output: ( (word@document) , 1 )
+
+Here we hava input key as byte offset and value as single line
+
+As we need the name of the document we are reading from,
+we get the name of the document by doing following:
+
+			//get filename
+			fileSplit = (FileSplit)context.getInputSplit();
+			filename = fileSplit.getPath().getName();
+
+Now, line(value.toString()) is parsed for each word using StringTokenizer and
+for each word ((word@document), 1) pair is created and written to context.
+
+WCReducer:
+
+For each identical key (word@document), reduces the values (1) into a sum (wordCount)
+	 *
+	 * Input:  ( (word@document) , 1 )
+	 * Output: ( (word@document) , wordCount )
+	 *
+	 * wordCount = number of times word appears in document
+	 
+Word count reducer has key as word@document and value is list of counts of same key word@document
+from mapper output which was 1 for each word@document instance.
+All this instance counts are added to get a wordCount for each unique word in each document 
+and a pair ( (word@document) , wordCount ) is written to context.write.
+
+
+DSMapper:
+
+
+/*
+	 * Rearranges the (key,value) pairs to have only the document as the key
+	 *
+	 * Input:  ( (word@document) , wordCount )
+	 * Output: ( document , (word=wordCount) )
+	 */
+	 
+	 
+Here mapper function has key as byte offset of start of each line which is redundent for us.
+We need value which is input pair ( (word@document) , wordCount ) in the form of text.
+We convert this text to string and split it on \t to get word@document and wordCount tokens.
+
+word@document is further splitted on @ to get word and document as tokens;
+
+This document token is converted to outputKey Text object and word and wordCount tokens are
+combined using = sign to get word=wordCount token which is further converted to Text object to get
+outputValue and this pair outputKey, outputValue is written to context.
+
+
+
+DSReducer:
+
+ /*
+	 * For each identical key (document), reduces the values (word=wordCount) into a sum (docSize) 
+	 *
+	 * Input:  ( document , (word=wordCount) )
+	 * Output: ( (word@document) , (wordCount/docSize) )
+	 *
+	 * docSize = total number of words in the document
+	 */
+	 
+	 
+Here the key is document and value is list of all word=wordCount objects for each unique word in
+that document. Our aim here is to addup all wordCounts of all words to get the document size and 
+convert output to form word@document and wordCount/docSize pair for each word in document.
+
+To add up the wordcount the for each value(word=wordCount) in list of values is splitted on = to
+get word, and wordCount tokens this wordCount is added to docSize. Also as we are interating over
+iterator we have to store seen word and wordCount into new lists so that we can access them again.
+
+Now we have document size. Now we again iterate throught list of words created in above loop 
+and for each word get the corresponding wordCount from list of wordCounts created in above loop, 
+convert it to output pair ((word@document), (wordCount/docSize)) and write it to context.
+
+
+TFIDF Mapper:
+
+/*
+	 * Rearranges the (key,value) pairs to have only the word as the key
+	 * 
+	 * Input:  ( (word@document) , (wordCount/docSize) )
+	 * Output: ( word , (document=wordCount/docSize) )
+	 */
+
+This is simply acheived by splitting input value and creting corresponding output value pairs
+and writing them to context.
+
+
+TFIDF Reducer:
+
+/*
+	 * For each identical key (word), reduces the values (document=wordCount/docSize) into a 
+	 * the final TFIDF value (TFIDF). Along the way, calculates the total number of documents and 
+	 * the number of documents that contain the word.
+	 * 
+	 * Input:  ( word , (document=wordCount/docSize) )
+	 * Output: ( (document@word) , TFIDF )
+	 *
+	 * numDocs = total number of documents
+	 * numDocsWithWord = number of documents containing word
+	 * TFIDF = (wordCount/docSize) * ln(numDocs/numDocsWithWord)
+	 *
+	 * Note: The output (key,value) pairs are sorted using TreeMap ONLY for grading purposes. For
+	 *       extremely large datasets, having a for loop iterate through all the (key,value) pairs 
+	 *       is highly inefficient!
+	 */
+
+To calculate TFIDF we need to know numDocsWithWord as we already have rest of the variables required.
+
+Input key is word and value is list of documents having that word along with its wordCount/docSize parameter.
+
+So numDocsWithWord is simply the length of values list which gives us the number of documents having that word.
+
+Now we need to calulate TFIDF value for each word in document i.e document@word as a key.
+
+For this we calculate TFIDF for each document having the word in values list as we have all the required variables we can easily 
+do this by:
+
+	TFIDF = (wordCount/docSize) * ln(numDocs/numDocsWithWord)
+	
+For each document having the word outputKey document@word and outputValue TFIDF pair is created and put into tfidfMap.
+Which is then sorted and written to context.
+
+
+Finally we get the TFIDF value for each unique document, word pair.

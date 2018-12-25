@@ -1,0 +1,38 @@
+================================================================================
+Single Author info:
+
+vphadke Vandan V Phadke
+
+Group info:
+
+angodse Anupam N Godse
+
+yjkamdar Yash J Kamdar
+================================================================================
+
+What data structures did you have to place in persistent memory?
+
+The following information was stored in persistent memory: 
+1) The time until which current execution has been done
+2) State of the lake at the previous two time steps 
+3) The pebbles generated randomly intially(as they were generated randomly, the next execution needs to consider the pebbles generated originally)
+
+
+================================================================================
+
+What is the overhead of checkpointing?
+
+Time taken without checkpointing 
+real	0m0.502s
+user	0m0.468s
+sys	0m0.010s
+
+
+Time taken with checkpointing
+real	0m37.697s
+user	0m0.497s
+sys		0m1.838s
+
+Checkpointing overhead ~ 37 secs
+
+This large overhead is due to backup at each time step of computation. 

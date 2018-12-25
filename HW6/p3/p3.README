@@ -1,0 +1,90 @@
+Single Author info:
+yjkamdar Yash Jitendra Kamdar 
+
+Group info:
+angodse Anupam N Godse
+vphadke Vandan V Phadke
+
+__________________________________________________
+
+We need to implement multi-node/multi-GPU Tensorflow via MPI using Horovod.
+
+Important Note: Instead of top/bottom grids for the ranks, we have implemented left/right grids, in which the left rank will communicate its rightmost rows to the right rank and the right rank will communicate it's leftmost rows to the left rank.
+Grids will be as follows:
+
+	<- - - - - -2N - - - - ->
+	
+	|-----------|-----------||
+	|			|			|
+N	|	Grid 0	|	Grid 1	|
+	|			|			|
+	|-----------|-----------|
+
+
+Execution steps:
+Refer the problem description for the execution steps
+
+
+Tasks/Results:
+1.Create lake-horo.py by adding Horovod to lake.py in order to support multiple nodes/GPUs.
+
+	We have added Horovod to the lake.py program from problem 2 to support multiple nodes/GPUs.
+	The number of pebbles provided in the input are initialized in the grids of both the ranks.
+	We have created the grids of the size N*N+3, as we need to communicate the 3 border rows for both the ranks. 
+	During initialization of pebbles though, we have taken the grid size of N*N for the pebbles generation. That is, we consider the columns 0 to N for the rank 0 and columns 3 to N+3 for rank 1.
+	We have set the send and receive buffers to the size of N*3 for this reason, and tensor variable is generated for each of these buffers. When we broadcast(send/receive) the 3 rows between both the ranks, via the buffers, the columns N,N+1,N+2 are update for rank 0 and columns 0,1,2 are updated for rank 1 grid. These communicated values are used to perform the calcualtion of the next step.
+	During final image generation the extra 3 rows in both ranks are ignored.
+
+
+
+2. Compare the execution time of your lake-horo.py against your lake.py using the parameters N=512, npebs=40, num_iter=400.
+
+Default execution time:
+	lake.py ->
+	./lake.py 512 40 400
+	Elapsed time: 11.4905281067 seconds
+
+	lake-horo.py ->
+	mpirun -np 2 ./lake-horo.py 512 40 400
+	Elapsed time: 129.79075408 seconds
+	Elapsed time: 129.79238987 seconds
+
+
+	The difference between the program running without MPI(CPU) and the program running with MPI is quite huge, wherein the time taken using MPI is almost 10 times that of the program without MPI, for our test case of 512 grid size, 40 pebbles and 400 iterations.
+	This can be due to the communication that takes place between the core on each step, to send and receive the border 3 rows of each of the cores. Since we are using Horovod to broadcast the data rows, which might be the main cause of the drastic communication overhead for the cores with gtx480 GPUs.
+
+
+Different execution times:
+	_____________________
+	100 iterations, 512 grid size (MPI ~10 times slower):
+	./lake.py 512 40 100
+	Elapsed time: 2.98449802399 seconds
+
+	mpirun -np 2 ./lake-horo.py 512 40 100
+	lapsed time: 32.6310091019 seconds
+	Elapsed time: 32.6441957951 seconds
+	_____________________
+
+	_____________________
+	1000 iterations, 128 grid size (MPI ~100 times slower):
+	./lake.py 128 40 1000
+	Elapsed time: 3.74315690994 seconds
+
+	mpirun -np 2 ./lake-horo.py 512 40 1000
+	Elapsed time: 324.288047791 seconds
+	Elapsed time: 324.292124987 seconds
+	_____________________
+
+	_____________________
+	100 iterations, 1024 grid size (MPI ~13 times slower)
+	./lake.py 1024 40 100
+	Elapsed time: 9.75426697731 seconds
+
+	mpirun -np 2 ./lake-horo.py 1024 40 100
+	Elapsed time: 128.684664011 seconds
+	Elapsed time: 128.685621023 seconds
+	_____________________
+
+Reason in difference in execution times:
+The primary reason of the difference is the communication overhead. As we inrease the number of iterations in the calculation, the time taken by the program using MPI increases dramatically, i.e. from 10 times to about a 100 times slower.
+If we increase the grid size and keep the iteration count constant/low, we should be able to see a gradual decrease in the difference. This can be because even though the communication between nodes still exists, it should be minimal in comparision to the time required to calculate each point in the grid.

@@ -1,0 +1,70 @@
+Single Author info: Anupam N Godse
+------------------------------------------------------------------------------------
+Q1.Describe your implementation step-by-step. This should include descriptions 
+	of what MPI messages get sent/received by which rank, and in what order. 
+
+1. The number of files are evenly divided by master rank(rank 0) among workers.
+	Master node divides remainder files among first remainder workers.
+	Master rank then sends these files to each workers by sending 
+	number of files each worker has to work on and the filepaths of those 
+	files.
+	
+2. Now each worker receives the filepaths sent by the master rank and
+	works on each file to construct the TFIDF array for each word@doc in those
+	files. It also creates a unique words array of structs for
+	unique words in those files.
+
+3. Now each worker sends this unique words array to master rank where
+	master rank combines unique words from all the ranks into a 
+	single unique words struct array and sends to all the workers.
+
+4. In this way all the workers get aware of how many documents have that 
+	word i.e numDocsWithWord field.
+	
+5. Using this unique words struct array for each worker TFIDF array of struct 
+	is populated and TFIDF value for each word@doc is calculated and stored 
+	in the corresponding TFIDF struct entry.
+
+5. Now each worker rank sends this TFIDF array struct to the master where master
+	just combines these structs from all the workers and put them into
+	single TFIDF struct array.
+	
+The output is then generated from this TFIDF struct array.
+
+------------------------------------------------------------------------------------
+
+Q2.Describe how you could add more parallelism to your code so that all of the 
+	processors on each MPI node are used instead of only one processor per MPI node?
+
+We can simply parallize the code in each rank using OpenMP pragma so that all the 
+processors on each MPI node are used.
+
+------------------------------------------------------------------------------------
+
+Q3.Compare your MPI implementation to the previous MapReduce and Spark 
+	implementations of TFIDF. 
+
+MPI implementation:
+	real	0m0.299s
+	user	0m0.023s
+	sys	0m0.038s
+	
+MapReduce implementation:
+	real	0m8.131s
+	user	0m11.588s
+	sys	0m0.701s
+	
+Spark implementation:
+	real	0m7.572s
+	user	0m17.338s
+	sys	0m1.096s
+	
+The timing results for each implementation are as expected. The MPI implementation
+is fastest because it runs on very low level and thus has very less overhead
+as compared to mapreduce and spark implementation which are frameworks and
+thus have complex APIs through which calculations are made and functions are
+called thus involving more time.
+Moreover they have additional interaction with distributed file system as in case
+with hadoop which reads/writes to hdfs in intermediate steps and thus have
+more overhead. The execution time of spark is less compared to hadoop because
+spark has added advantage of in memory calculations using RDDs.

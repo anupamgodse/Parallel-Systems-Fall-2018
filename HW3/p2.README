@@ -1,0 +1,123 @@
+Single Author info:
+
+angodse Anupam N. Godse
+
+
+V0 Timings (lake.log)
+
+running ./lake with (1024 x 1024) grid, until 2.000000, with 1 threads
+Initialization took 0.028613 seconds
+Simulation took 252.848040 seconds
+Init+Simulation took 252.876653 seconds
+
+
+
+v1-1 (optimizing memcpy only)
+
+running ./lake with (1024 x 1024) grid, until 2.000000, with 1 threads
+Initialization took 0.031682 seconds
+Simulation took 244.294070 seconds
+Init+Simulation took 244.325752 seconds
+
+How/why does your optimization for removing memory copies work?
+Memcpy copies all data from one location to another. The optimization 
+only swaps the pointers of the arrays and is hence faster.
+
+
+v1-2-inner (optimizing memcpy with omp for inner loop)
+
+running ./lake with (1024 x 1024) grid, until 2.000000, with 16 threads
+Initialization took 0.031116 seconds
+Simulation took 51.382508 seconds
+Init+Simulation took 51.413624 seconds
+
+
+v1-2-both (optimizing memcpy with omp for both loop)
+
+running ./lake with (1024 x 1024) grid, until 2.000000, with 16 threads
+Initialization took 0.031050 seconds
+Simulation took 26.357158 seconds
+Init+Simulation took 26.388208 seconds
+
+
+v1-2-outer (optimizing memcpy with omp for outer loop)
+
+running ./lake with (1024 x 1024) grid, until 2.000000, with 16 threads
+Initialization took 0.032480 seconds
+Simulation took 14.604843 seconds
+Init+Simulation took 14.637323 seconds
+
+Does which loop you parallelized matter? Why or why not?
+Yes! When we parallize inner loop only the inner n iterations get 
+parallelized and the outer n iterations are executed serially.
+When we parallelize outer loop only the outer loop gets paralllized.
+When we parallize both loops using collapse all the combinations of i
+and j (inner and outer loop index variables) are parallelized.
+
+So if we parallize only the inner loop the performance would be worst
+because in each iteration step of the outer loop, a parallel region is 
+created causing overhead.
+If we parallize both loop the compiler treats it as a single loop of n*m
+iterations and hence the performance really depends on what the value of n
+and m are and the overhead for compiler.
+In case of outer loop parallelizm the compiler will generate better output 
+than inner loop parallelizm because the overhead discussed above would not
+be there and also it gives cache locality advantage.
+
+Does parallelizing both loops make a difference? Why or why not?
+Yes it does make difference if both loops are parallized. If both loops 
+are parallized using collapse then the compiler treats it as a single 
+loop with n*m iterations and then the iterations are divided amonst
+the threads.
+It has more overhead. So takes more time for smaller input sizes.
+Maybe for bigger input sizes it will perform better.
+
+
+
+v2-parallelize init
+
+running ./lake with (1024 x 1024) grid, until 2.000000, with 16 threads
+Initialization took 0.031237 seconds
+Simulation took 14.046095 seconds
+Init+Simulation took 14.077332 seconds
+
+v2-parallelize init + parallelize memcpy (u0->uo, u1->uc)
+
+running ./lake with (1024 x 1024) grid, until 2.000000, with 16 threads
+Initialization took 0.064651 seconds
+Simulation took 13.852663 seconds
+Init+Simulation took 13.917314 seconds
+
+***This is the best optimized code for openmp***
+
+Why does parallelizing memory initializations matter?
+Because memory initializaion involves copy of 2 n*n 
+arrays which are quite big and takes a little time.
+Depending on value of n we should decide if or not to paralllelize the
+memcpy. In our case the value of m is quite large i.e. 512/1024
+so we get better results if we parallelize memory initialization.
+
+v3-dynamic scheduling
+
+running ./lake with (1024 x 1024) grid, until 2.000000, with 16 threads
+Initialization took 0.041710 seconds
+Simulation took 17.417076 seconds
+Init+Simulation took 17.458786 seconds
+
+Does the scheduling type matter? Why or why not?
+Yes it does. The static scheduling ensures the that the iteration blocks
+are statically mapped to the thread. In our code there are 3 iteration blocks
+and thus if we have static scheduling all the data that is accessed by a 
+particular thread in first iteration block is likely to be accessed by that 
+thread in the next iteration block and hence improves performace.
+Thus in this case dynamic scheduling performs bad than the static 
+scheduling.
+The dynamic approach calculates the size of the iterations to be 
+mapped at the runtime. It can be useful if the computation time of
+iterations varies and thus it will avoid idle sitting of therad.
+
+
+This program is particularly easy to parallelize. Why?
+It has same iterations block structure at initialize, compute loop 
+and init function. Also the loops are independent iterations of one
+another.

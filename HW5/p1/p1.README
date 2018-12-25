@@ -1,0 +1,105 @@
+Single Author info:
+angodse Anupam N Godse
+
+
+
+Installation/Execution:
+
+ssh to arc
+
+srun -N4 -popteron --pty /bin/bash
+tar xvf TFIDF.tar
+source spark-hadoop-setup.sh &> setup_output.txt
+hdfs dfs -put input /user/UNITYID/input
+            
+
+javac TFIDF.java
+jar cf TFIDF.jar TFIDF*.class
+spark-submit --class TFIDF TFIDF.jar input &> spark_output.txt
+grep -v '^2018\|^(\|^-' spark_output.txt > output.txt
+diff -s solution.txt output.txt
+
+
+
+Implementation details:
+
+Intial job: generation of wordsRDD
+
+Creates a (key,value) pair for every word in the document 
+
+Input:  (filePath , fileContents)
+
+Output: ( (word@document) , docsize)
+
+Here we have input key as filepath and value as contents of a file.
+
+All words are parsed from the file and docsize is calculated and for each
+word a output pair (word@document, docsize) is added to list.
+
+This generates wordsRDD.
+
+
+Next step: to generate tffRDD
+This gathers all data needed for TF calculation:
+
+	Input:  ( (word@document) , docSize )
+	  Map:    ( (word@document) , (1/docSize) )
+	Reduce: ( (word@document) , (wordCount/docSize) )
+
+
+Map just rearranges the input tuple and generate input for reduce step
+In reduce we use reduceByKey function which iterates over all the
+pairs of map output and reduced two tuples to single tuple by
+adding them up as specified in the inline function.
+
+In this way all the same key values add up and we get output
+in form (word@document, wordCount/docSize)
+
+
+In next step we generate all data required for IDF calculation.
+Call it as idfRDD
+
+We take input as tfRDD RDD's generated above and map them to 
+form 
+	
+	( word , (1/document) )
+
+Now here key is word and value is 1/document.
+
+Now we use reduce function to get the count of words present in all 
+documents and list of documents it is present in. The output is in
+the following form.
+	
+	( word , (numDocsWithWord/document1,document2...) )
+
+What reduce inline function does is takes two tuples and adds 
+the numerators of both values and stich the denominators.
+
+Next we map this to following form by map function
+
+	( (word@document) , (numDocs/numDocsWithWord) )
+
+
+
+At this point we have tfRDD's in form (word@document, wordCount/docSize)
+which can be used to calulate TF value in the following way:
+
+	TF = wordCount/docSize
+	
+which is store in tfFinalRDD for each word@document pair.
+
+Similarly we use idfRDD to calculate IDF by doing
+
+	IDF = naturalLog(numDocs/numDocsWithWord);
+
+which is stored in idfFinalRDD.
+
+Finally we use union to put idfFinalRDD and tffinalRDD
+together and use reduce to multiply the values for each
+word@document key.
+
+Finally we map this (word@document, TFIDF) output to 
+(document@word, TFIDF) form.
+
+
+Finally we get the TFIDF value for each unique document, word pair.

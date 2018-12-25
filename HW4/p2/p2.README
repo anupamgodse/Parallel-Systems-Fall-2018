@@ -1,0 +1,60 @@
+Single Author info:
+angodse Anupam N Godse
+
+Group info:
+yjkamdar Yash J Kamdar 
+vphadke Vandan V Phadke
+
+
+Elapsed Time for each configuration:
+
+A: (1, 8, 8, 45) -- Combination of MPI and OpenMP       	
+Elapsed Time = 15.5 seconds
+% of time spent in MPI = 1.63%
+Most expensive MPI call - 	Waitall 
+									App% time = 0.74%
+									MPI% time = 45.56%
+
+
+B: Same as A but without core binding
+Elapsed Time = 38.8 seconds
+% of time spent in MPI = 3.67%
+Most expensive MPI call - 	Waitall 
+									App% time = 2.14%
+									MPI% time = 58.44%
+
+C: (4, 0, 8, 60) -- MPI Only
+Elapsed Time = 37.2 seconds
+% of time spent in MPI = 1.98%
+Most expensive MPI call - 	Waitall 
+									App% time = 1.13%
+									MPI% time = 56.96%
+
+D: Same as C but without core binding
+Elapsed Time = 37 seconds
+% of time spent in MPI = 1.75%
+Most expensive MPI call - Waitall 
+									App% time = 1.15%
+									MPI% time = 65.73%
+									
+									
+What differences are there between configurations?
+Config A: As it runs using both MPI and OpenMP and with bind-to-core option enabled 
+it takes the least time as expected as parallellism is more using OpenMP which would do the
+in betweeen work quickly as it will use more threads and binding ensures that the
+tasks are not migrated between cores.
+
+Config B: This configuration is same as configuration A but has bind-to-core option disabled.
+This results in migration of tasks in between cores which adds extra overhead due to data
+caching issues.
+
+Config C: This runs using only MPI and basically on only one thread so takes more time than config A
+
+config D: This is same as D but bind-to-core option is disabled. As it has only one thread this option
+won't affect time for C and D.
+
+What are the limits to parallelization?
+Overhead for small problem size, available number of nodes and cores, and data caching issues if bind
+to core is disabled are limits to parallelization for this problem.
+For MPI tasks as next timestep computation depends on previous timestep computation we have to wait for
+all tasks to complete until the data is sent to other tasks. This limits parallelization as well.

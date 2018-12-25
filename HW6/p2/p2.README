@@ -1,0 +1,121 @@
+Single Author info:
+
+angodse Anupam N Godse
+
+Group info:
+
+vphadke Vandan V Phadke
+
+yjkamdar Yash J Kamdar
+----------------------------------------------------------------------------------
+
+Q1.Compare the execution time of your lake.py against lake.o using the parameters 
+	N=512, npebs=16, num_iter=400. 
+
+Time for lake.py
+Elapsed time: 11.3188090324 seconds
+
+Time for lake.o
+Main loop took 0.566393 seconds
+
+
+----------------------------------------------------------------------------------
+
+Q2.Provide possible explanations for the difference in execution times. 
+
+There is a lot of difference between the execution times of lake.py 
+implemented in tensorflow and lake.o which has corresponding C implementaion.
+This is because tensorflow has overhead of creating a dataflow graph to represent 
+your computation in terms of the dependencies between individual operations.
+Moreover the compiler(XLS) has to extract attributes from this dataflow graph 
+to generate optimized code and which has extra overhead.
+
+lake.o version runs locally on C compiler and hence has no overhead involved
+compared to corresponding tensorflow implementation.
+
+Moreover, tensorflow has extra overheads due to complex APIs it provides
+to the user. As compared C is very low level language and has least
+overheads compared to programming languages like python.
+
+----------------------------------------------------------------------------------
+
+
+Q3. Test other parameter configurations to see which of the three input parameters 
+affects execution time the most. Be sure to include the parameter values and 
+execution time for each test case you used. 
+
+Varying grid size:
+
+./lake.py 128 16 400
+Elapsed time: 1.50395703316 seconds
+
+./lake.o 128 16 400
+Main loop took 0.081726 seconds
+
+./lake.py 256 16 400
+Elapsed time: 3.86992096901 seconds
+
+./lake.o 256 16 400
+Main loop took 0.155800 seconds
+
+./lake.py 512 16 400
+Elapsed time: 11.2554888725 seconds
+
+./lake.o 512 16 400
+Main loop took 0.527858 seconds
+
+As we can see the execution time grows exponentially as the grid size
+is doubled.
+
+Varying npebs:
+
+./lake.py 512 8 400
+Elapsed time: 11.4566688538 seconds
+
+./lake.o 512 8 400
+Main loop took 0.582627 seconds
+
+./lake.py 512 16 400
+Elapsed time: 11.2554888725 seconds
+
+./lake.o 512 16 400
+Main loop took 0.527858 seconds
+
+./lake.py 512 32 400
+Elapsed time: 11.3024230003 seconds
+
+./lake.o 512 32 400
+Main loop took 0.555991 seconds
+
+Doubleing(varying in general) number of pebs has no 
+effect on execution time because the computations 
+do not depend on number of pebbles as each point 
+has to be computed in each iteration  whether pebble 
+is present or not.
+
+Varying number of iterations.
+
+./lake.py 512 16 200
+Elapsed time: 5.66032290459 seconds
+
+./lake.o 512 16 200
+Main loop took 0.267376 seconds
+
+./lake.py 512 16 400
+Elapsed time: 11.2554888725 seconds
+
+./lake.o 512 16 400
+Main loop took 0.527858 seconds
+
+./lake.py 512 16 800
+Elapsed time: 22.9970128536 seconds
+
+./lake.o 512 16 800
+Main loop took 1.073860 seconds
+
+
+Execution time doubles as number of iterations are doubled.
+
+
+In conclusion, execution time is most dependent on the Grid size
+and grows exponentially as grid size is increased.

@@ -1,0 +1,149 @@
+Single Author info:
+yjkamdar Yash Jitendra Kamdar 
+
+Group info:
+angodse Anupam N Godse
+vphadke Vandan V Phadke
+
+Problem statement:
+Determine the effect of frequency scaling on the LULESH code's:
+A: wall-clock time
+B: power consumption
+C: stall cycles
+
+Results:
+________________________________________
+
+Frequency = 2GHz
+Average Power consumption = ~708 Watts
+
+Stall counters-
+rank, PAPI_RES_STL, PAPI_STL_ICY
+
+0 16424256422 149053943
+1 16346997519 145091124
+2 16515320697 154109050
+3 16274175819 116083994
+4 16484956899 156669118
+5 16503204421 159410615
+6 16336384718 137262087
+7 16413109195 131016091
+
+Elapsed Time = 96.475481 seconds.
+
+_________________________________________
+
+
+Frequency = 1.5GHz
+Average Power consumption = ~689 Watts
+
+Stall counters-
+rank, PAPI_RES_STL, PAPI_STL_ICY
+
+0 15130954158 128966725
+1 15120681975 132090907
+2 15134901441 134158759
+3 15213332436 146227981
+4 14996050076 133359441
+5 14975187034 132128032
+6 14947288803 104048031
+7 15042470777 118964474
+
+Elapsed Time = 119.904499 seconds.
+
+
+________________________________________
+
+
+Frequency = 1.2GHz
+Average Power consumption = ~678 Watts
+
+Stall counters-
+rank, PAPI_RES_STL, PAPI_STL_ICY
+
+0 14308701403 116107365
+1 14392796343 102387122
+2 14402855369 103286633
+3 14301736509 106858061
+4 14688300839 138306453
+5 14532176974 125977892
+6 14796475562 153424215
+7 14763098056 137626951
+
+Elapsed Time = 144.594662 seconds.
+
+________________________________________
+
+Frequency = 1000MHz
+Average Power consumption = ~669 Watts
+
+Stall counters-
+rank, PAPI_RES_STL, PAPI_STL_ICY
+
+0 14063840933 118024520
+1 13926111784 113686868
+2 13792433233 105661625
+3 14062647796 125776393
+4 13946912369 114143532
+5 13894075492 104712608
+6 14220048517 121546359
+7 13999689370 121976638
+
+Elapsed Time = 167.091484 seconds.
+
+________________________________________
+
+Frequency = 800MHz
+Average Power consumption = ~664 Watts
+
+Stall counters-
+rank, PAPI_RES_STL, PAPI_STL_ICY
+
+0 13484975006 119166395
+1 13761731175 133831189
+2 13532191870 100894387
+3 13377098934 96414971
+4 13502519819 118603869
+5 13465991608 95557103
+6 13540967735 114568595
+7 13459413169 87900592
+
+Elapsed Time = 203.029523 seconds.
+
+________________________________________
+
+
+Stats comparision
+
+Frequency 	Time 	PAPI_RES_STL 	PAPI_STL_ICY 	Power
+2GHz		96.47	16412300711		143587002.8		708
+1.5 GHz 	119.90 	15070108338		128743043.8		689
+1.2 GHz 	144.59 	14523267632		122996836.5		678
+1000 MHz 	167.09 	13988219937		115691067.9		669
+800 MHz 	203.02 	13515611165		108367137.6		664
+
+
+________________________________________
+
+Explanation:
+
+How scaling the frequency affects time, power, and stall counts?
+
+Time: 
+Increase in frequency means more number of cycles per second. This assists in doing more computations in each time interval. Thus, decreasing the overall runtime of the program.
+
+Power:
+As we decreased the frequency, the power consumption by the processors while executing the program, also decreased. As the power is calculated per second, due to lower number of cyles(lower frequency) power consumed is also low for each second. Even though the average power consumption per second is low, the runtime is high thereby increasing the overall power consumption by the entire execution of the program.
+
+eg: Time taken when clock speed is 2GHz is ~100 secs and the avg power is 708
+whereas for 800MHz, time taken is ~200secs and avg power is 664. 
+
+
+Stall cycles counts:
+The stall counts are directly proportional to the frequency. As the frequency decreases, the stall cycle counts decrease as well. When a processor issues a memory request, some time passes by till the memory is fetched first from the disk, then to the L2 cache, to the L1 cache and to the registers. Processor stalls cycles till then. As we lower the frequency, the memory fetch time remains the same, whereas the number of cycles decrease thereby decreasing stall cycle count. We placed counters of two types 'PAPI_RES_STL' and 'PAPI_STL_ICY', both of which are explained below.
+
+PAPI_RES_STL - Cycles stalled on any resource:
+This counter is the number of stall cycles taken while waiting for a memory/resource. What this does is a request to fetch memory has been made to the processor and while the memory/resource is been allocated, the stall cycle count increases. Since lower frequency also means lesser memory requests per second, the stall cycle count is also low.
+
+PAPI_STL_ICY - Cycles with no instruction issue:
+This counter is the number of stall cycles issued while waiting for an instruction. This might happen when one instruction is dependent on the other in terms of results/registers/memory pointers because of which no progress can be made before the other instruction finishes.
